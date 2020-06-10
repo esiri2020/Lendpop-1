@@ -1,24 +1,49 @@
 import React, {Component} from 'react';
+import Head from 'next/head';
 import clsx from 'clsx';
 import withStyles from "@material-ui/styles/withStyles";
-import {AppBar, CssBaseline, Paper, Typography,
-  Grid, Slider, Button, Avatar, Box, Badge, Divider,
-  IconButton, List, Drawer, Toolbar, Container, TextField,
-} from "@material-ui/core/";
+import Divider from '@material-ui/core/Divider';
+import Toolbar from '@material-ui/core/Toolbar';
+import Drawer from '@material-ui/core/Drawer';
+import List from '@material-ui/core/List';
+import IconButton from '@material-ui/core/IconButton';
+import Button from '@material-ui/core/Button';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import TextField from '@material-ui/core/TextField';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Grid from '@material-ui/core/Grid';
+import Typography from '@material-ui/core/Typography';
+import Container from '@material-ui/core/Container';
+import Avatar from '@material-ui/core/Avatar';
+import Box from '@material-ui/core/Box';
+import Paper from '@material-ui/core/Paper';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText from '@material-ui/core/ListItemText';
+import ListItem from '@material-ui/core/ListItem';
+import DashboardIcon from '@material-ui/icons/Dashboard';
+import ExitToAppIcon from '@material-ui/icons/ExitToApp';
 import MenuIcon from '@material-ui/icons/Menu';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import NotificationsIcon from '@material-ui/icons/Notifications';
 import LoanApplicationForm from '../components/loanApplicationForm';
 import { mainListItems, secondaryListItems } from '../components/listItems';
+import LinkOutlinedIcon from '@material-ui/icons/LinkOutlined';
+import ButtonGroup from '@material-ui/core/ButtonGroup';
 import Copyright from '../components/copyright';
+import PreviousLoans from '../components/previousLoans';
 import theme from '../src/theme';
+import Router from 'next/router';
+import PropTypes from 'prop-types';
+import ReferButton from '../components/referButton'
 
-const localStorage = require('local-storage')
+const localStorage = require('local-storage');
+const sessionstorage = require('sessionstorage');
 const drawerWidth = 240;
 
 const useStyles = theme => ({
   root: {
     display: 'flex',
+    backgroundColor: "rgba(131, 210, 217, 0.05)"
   },
   toolbar: {
     paddingRight: 24, // keep right padding when drawer closed
@@ -121,6 +146,9 @@ const useStyles = theme => ({
     }
 
   },
+  buttonGroup: {
+    marginTop: '50px'
+  },
   divider: {
     width: "40px",
     margin: 0,
@@ -133,33 +161,104 @@ const useStyles = theme => ({
 
 
 class Dashboard extends Component {
+  static pageTransitionDelayEnter = true
   constructor(props) {
     super (props);
     this.state = {
-      open: true,
-      questions: false,
-      firstName: ''
+      loaded: false,
+      open: false,
+      questions: true,
+      application: false,
+      showHistory: false,
+      firstName: '',
+      lastName: '',
+      email: ''
     }
     this.handleDrawer = this.handleDrawer.bind(this);
     this.submit = this.submit.bind(this);
+    this.continueApplication = this.continueApplication.bind(this);
+    this.reset = this.reset.bind(this);
+    this.showHistory = this.showHistory.bind(this);
+    this.logout = this.logout.bind(this);
   }
+
   componentDidMount() {
-    this.setState({ firstName : localStorage('firstName') ? localStorage('firstName') : ''})
+    this.timeoutId = setTimeout(() => {
+      this.props.pageTransitionReadyToEnter()
+      this.setState({ loaded: true })
+    }, 2000)
+    let state = sessionstorage.getItem('state')
+    if(state){
+      state = JSON.parse(state)
+      console.log(state);
+      this.setState({
+        firstName: state.first_name,
+        lastName: state.last_name,
+        email: state.email
+      })
+    } else if (sessionStorage.getItem('email')) {
+    this.setState({
+      firstName : sessionStorage.getItem('firstName') ? sessionStorage.getItem('firstName') : '',
+      lastName : sessionStorage.getItem('lastName') ? sessionStorage.getItem('lastName') : '',
+      email : sessionStorage.getItem('email') ? sessionStorage.getItem('email') : '',
+    })
+    } else {
+    Router.push('/login')
+    }
   }
+
+  componentWillUnmount() {
+    if (this.timeoutId) clearTimeout(this.timeoutId)
+  }
+
+  continueApplication(){
+    this.setState({
+      questions: false,
+      showHistory: false,
+      application: true
+    })
+  }
+
+  showHistory(){
+    this.setState({
+      questions:false,
+      application: false,
+      showHistory: true,
+    })
+  }
+
   handleDrawer() {
     this.setState({open: !this.state.open})
   }
+
+  reset(){
+    this.setState({
+      showHistory: false,
+      application: false,
+      questions: true
+    })
+  }
+
   submit(event) {
     event.preventDefault()
     console.log(event);
   }
 
+  logout() {
+    sessionStorage.clear();
+    return Router.push('/login')
+  }
+
   render() {
+    if (!this.state.loaded) return null;
     const { classes } = this.props;
     const fixedHeightPaper = clsx(classes.paper, classes.fixedHeight);
-    const { open, firstName } = this.state;
+    const { open, firstName, email, lastName } = this.state;
     return (
       <div className={classes.root}>
+        <Head>
+          <title>InstaKash: Dashboard</title>
+        </Head>
         {/* <CssBaseline /> */}
         <Drawer
           variant="permanent"
@@ -170,11 +269,26 @@ class Dashboard extends Component {
         >
           <div className={classes.toolbarIcon}>
             <IconButton onClick={this.handleDrawer}>
+              {open && <img src={require('../public/images/instakash-logo.png')} style={{width: '180px', height: '50px'}}/>}
               <ChevronLeftIcon />
             </IconButton>
           </div>
           <Divider/>
-          <List>{mainListItems}</List>
+          <List>
+            <ListItem button onClick={this.reset}>
+              <ListItemIcon>
+                <DashboardIcon />
+              </ListItemIcon>
+              <ListItemText primary="Dashboard" />
+            </ListItem>
+            <Divider />
+            <ListItem button onClick={this.logout}>
+              <ListItemIcon>
+                <ExitToAppIcon />
+              </ListItemIcon>
+              <ListItemText primary="Logout" />
+            </ListItem>
+          </List>
           <Divider />
           {/* <List>{secondaryListItems}</List> */}
         </Drawer>
@@ -184,15 +298,24 @@ class Dashboard extends Component {
             <Grid container spacing={3}>
               {/* Chart */}
               <Grid item xs={12}>
-                <Paper className={fixedHeightPaper}>
+                <Paper className={fixedHeightPaper} style={{justifyContent: 'center'}}>
                   <Grid container>
                     <Grid className={classes.hello} item xs={12} sm={8}>
                       <Typography variant="h3" color="inherit" noWrap className={classes.title}>
                         Hello, {firstName? firstName : 'User'}!
                       </Typography>
-                      <Typography variant='body1'>
-                        Welcome to Lendpop, please continue your application.
+                      <Typography variant='body1' styles={{marginTop:"5px"}}>
+                        Welcome to InstaKash, please continue your application.
                       </Typography>
+                      {/* <ButtonGroup className={classes.buttonGroup} aria-label="outlined primary button group">
+                        <Button>Refer your friends and get N1,000</Button>
+                        <Button disabled={true} >https://member.instakash.com/api/landing/&pc=5053&sid=CID137</Button>
+                        <Button variant="outlined"
+                          color="primary"
+                          className={classes.root}
+                          endIcon={<LinkOutlinedIcon/>} />
+                      </ButtonGroup> */}
+                      <ReferButton/>
                     </Grid>
                   </Grid>
                   {/* <Chart /> */}
@@ -205,15 +328,17 @@ class Dashboard extends Component {
                     variant="outlined"
                     color="primary"
                     className={classes.gridButton}
-                                                                                             >Continue my loan application</Button>
+                    onClick={this.continueApplication}>
+                    <span style={{whiteSpace: 'nowrap'}}>Continue my loan application</span>
+                  </Button>
                   </Grid>
                   <Divider className={classes.divider} orientation="horizontal"/>
 
                   <Grid className={classes.buttonContainer} item xs={12} md='auto' lg='auto'><Button
                     fullWidth
                     variant="outlined"
-                    className={classes.gridButton}
-                                                                                             >Approval Documents</Button>
+                    className={classes.gridButton}>
+                  Approval Documents</Button>
                   </Grid>
                   <Divider className={classes.divider} orientation="horizontal"/>
 
@@ -221,7 +346,9 @@ class Dashboard extends Component {
                     fullWidth
                     variant="outlined"
                     className={classes.gridButton}
-                                                   >Other applications</Button></Grid>
+                    onClick={this.showHistory}>
+                  Other applications</Button>
+                  </Grid>
                 </Grid>
               </Grid>
               {this.state.questions &&
@@ -246,15 +373,26 @@ class Dashboard extends Component {
                           variant="contained"
                           color="primary"
                           className={classes.submit}
+                          style={{marginTop: '10px'}}
                         >Send</Button>
                       </Grid>
                     </form>
 
                   </Paper>
                 </Grid>}
-              <Grid item xs={12}>
-                <LoanApplicationForm/>
-              </Grid>
+              {this.state.application &&
+                <Grid item xs={12}>
+                  <LoanApplicationForm
+                    firstName={firstName}
+                    lastName={lastName}
+                    email={email}
+                    handler={this.continueApplication}/>
+                </Grid>}
+              {this.state.showHistory &&
+                <Grid item xs={12}>
+                  <PreviousLoans email={email}/>
+                </Grid>
+              }
             </Grid>
             <Box pt={4}>
               <Copyright />
@@ -264,6 +402,14 @@ class Dashboard extends Component {
       </div>
     )
   }
+}
+
+Dashboard.propTypes = {
+  pageTransitionReadyToEnter: PropTypes.func,
+}
+
+Dashboard.defaultProps = {
+  pageTransitionReadyToEnter: () => {},
 }
 
 export default withStyles(useStyles)(Dashboard);

@@ -17,13 +17,15 @@ import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
 import Typography from '@material-ui/core/Typography';
 import theme from '../src/theme';
 import { withStyles, styled } from '@material-ui/core/styles';
+import Api from '../utils/axios.service';
 import Copyright from './copyright';
 
-const localStorage = require('local-storage')
+const localStorage = require('local-storage');
+const sessionstorage = require('sessionstorage');
 const useStyles = theme => ({
   root: {
     height: '100vh',
-    backgroundImage: 'url(https://source.unsplash.com/random)',
+    backgroundImage: 'url(' + `${require('../public/images/InstaKash-background.jpg')}` + ')',
     backgroundRepeat: 'no-repeat',
     backgroundColor:
       theme.palette.type === 'light' ? theme.palette.grey[50] : theme.palette.grey[900],
@@ -31,10 +33,12 @@ const useStyles = theme => ({
     backgroundPosition: 'center',
   },
   paperroot: {
-    height: '90%',
-    marginLeft: '30px',
-    alignSelf: 'center',
-    borderRadius: '10px'
+    "@media screen and (min-width: 600px)": {
+      height: 'auto',
+      marginLeft: '30px',
+      alignSelf: 'center',
+      borderRadius: '10px'
+    }
   },
   paper: {
     margin: '2rem 32px',
@@ -43,6 +47,7 @@ const useStyles = theme => ({
     alignItems: 'center',
     textAlign: "left",
     fontSize: "0.6rem",
+    alignItems: 'flex-start'
   },
   avatar: {
     margin: theme.spacing(1),
@@ -55,7 +60,6 @@ const useStyles = theme => ({
   },
   submit: {
     borderRadius: '20px',
-    margin: theme.spacing(3, 0, 2),
   },
   sliderLabel: {
     marginTop: '1rem'
@@ -67,7 +71,7 @@ const useStyles = theme => ({
     padding: "0 2em",
     border: `1px solid ${theme.palette.secondary.main}`,
     borderRadius: "35px",
-    marginTop: '2rem'
+    marginTop: '1rem'
   }
 });
 
@@ -122,7 +126,7 @@ class SignUp extends Component {
       firstName: '',
       lastName: '',
       email: '',
-      principal: 1600000,
+      principal: 5000,
       period: 6,
       monthlyPayment: ''
     }
@@ -136,6 +140,7 @@ class SignUp extends Component {
   }
   componentDidMount() {
     this.calculateMonthlyPayment()
+    console.log(Router.route);
   }
 
   handleInputChange(event) {
@@ -157,7 +162,7 @@ class SignUp extends Component {
   }
 
   convertPrincipal(value) {
-    return `NGN ${value.toLocaleString()}`
+    return `SAR ${value.toLocaleString()}`
   }
 
   convertMonth(value) {
@@ -167,24 +172,29 @@ class SignUp extends Component {
   calculateMonthlyPayment() {
     const period = this.state.period
     const principal = this.state.principal
-    const rate = 0.1
+    const rate = 0.3
     const interest = principal*rate*(period/12)
     const total = principal + interest
-    const monthlyPayment = Math.ceil(total/(period*1000))*1000
+    const monthlyPayment = total/(period)
     this.setState({monthlyPayment})
   }
 
   submit(event) {
     event.preventDefault();
     const postData = {
-      amount: this.state.principal,
+      amount: `${this.state.principal}`,
       first_name: this.state.firstName,
       last_name: this.state.lastName,
       email: this.state.email,
     }
-    localStorage('firstName', this.state.firstName)
-    console.log(JSON.stringify(postData));
-    Router.push('/email')
+    for (let key in this.state) {
+      console.log(key);
+      if (['principal', 'period', 'monthlyPayment'].includes(key)){continue}
+      sessionstorage.setItem(key, this.state[key])
+    }
+    Api.register(JSON.stringify(postData)).then(response => {
+      Router.push('/email');
+    }).catch(error => console.log(error.response))
   }
 
   render() {
@@ -193,9 +203,9 @@ class SignUp extends Component {
     return (
       <Grid container component="main" className={classes.root}>
         <CssBaseline />
-        <Grid className={classes.paperroot} item xs={12} sm={8} md={5} lg={4} component={Paper} elevation={6} square>
+        <Grid className={classes.paperroot} item xs={12} sm={6} md={4} lg={4} component={Paper} elevation={6} square>
           <div className={classes.paper}>
-            <Typography component="h4" variant="h5">
+            <Typography component="h4" variant="h5" style={{color: theme.palette.secondary.main}}>
               Sign up
             </Typography>
             <Typography>You are a step closer to joining thousands of people who trust us to back their financial needs</Typography>
@@ -249,13 +259,13 @@ class SignUp extends Component {
                   shrink: true,
                 }}
               />
-              <Typography className={classes.sliderLabel} variant="caption" display="block" gutterBottom>How much would you like to lend <span className={classes.value}>{this.convertPrincipal(principal)}</span> </Typography>
+              <Typography className={classes.sliderLabel} variant="caption" display="block" gutterBottom>How much would you like to borrow? <span className={classes.value}>{this.convertPrincipal(principal)}</span> </Typography>
               <PrettoSlider
                 aria-label="pretto slider"
                 name="principal"
                 value={principal}
-                min={150000} max={5000000}
-                step={50000}
+                min={1000} max={10000}
+                step={500}
                 valueLabelDisplay = "auto"
                 ValueLabelComponent={ValueLabelComponent}
                 valueLabelFormat = {this.convertPrincipal}

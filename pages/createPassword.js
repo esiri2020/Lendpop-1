@@ -18,7 +18,7 @@ import Api from '../utils/axios.service';
 import theme from '../src/theme';
 import Copyright from '../components/copyright';
 
-const localStorage = require('local-storage');
+const localStorage = require('local-storage')
 const sessionstorage = require('sessionstorage');
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -45,37 +45,43 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function EmailVerification(props) {
-  const firstName = sessionstorage.getItem('firstName') ? sessionstorage.getItem('firstName') : 'User'
+export default function Login(props) {
   const email = sessionstorage.getItem('email')
 
   const classes = useStyles();
 
-  const [emailCode, setEmailCode] = useState()
+  const [password, setPassword] = useState('');
+  const [password1, setPassword1] = useState('');
+  const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
-    if (email){
-      const postData = {email: email};
-      Api.otpGeneration(JSON.stringify(postData))
-      .then(response => console.log(response))
-      .catch(error => console.log(error))
-  } else {
-    Router.push('/signUp')
-  }
-}, [])
+    if (!email) {Router.push('/')}
+  }, [])
 
   const submit = event => {
     event.preventDefault();
-    console.log(emailCode);
+    if (password === password1){
+    console.log(email, password);
     // Router.push('/dashboard');
     const postData = {
       email: email,
-      otp: emailCode
-    }
-    Api.verification(JSON.stringify(postData)).then(response => {
-      console.log(response)
-      return Router.push('/createPassword');
-    }).catch(error => console.log(error))
+      password: password
+    };
+    Api.password(JSON.stringify(postData)).then(response => {
+      console.log(response);
+      return Router.push('/dashboard');
+    }).catch(error => {
+      if (error.response && error.response.status === 401 ){
+        setErrorMessage(error.response.data.description);
+        setError(true)}
+      else {
+        console.log(error)
+      }
+    })
+  } else {
+      setErrorMessage("Passwords do not match");
+      setError(true)}
   }
 
   const cancel = event => {
@@ -89,7 +95,7 @@ export default function EmailVerification(props) {
   return (
     <div>
       <Head>
-        <title>InstaKash: Email Verification</title>
+        <title>InstaKash Password</title>
       </Head>
       <Container component="main" maxWidth="xs">
         <CssBaseline />
@@ -98,21 +104,47 @@ export default function EmailVerification(props) {
             <LockOutlinedIcon />
           </Avatar>
           <Typography component="h1" variant="h5">
-            Verify Email
+            Create a Password
           </Typography>
           <form className={classes.form} onSubmit={submit} validate={1}>
-            <Typography>To verify your email, kindly type in the OTP code sent to your email.</Typography>
+            {/* <Typography></Typography> */}
             <TextField
+              error={error}
               variant="outlined"
               margin="normal"
               required
               fullWidth
-              id="outlined-emailCode"
-              label="OTP Code"
-              name="emailCode"
-              autoComplete="Verification Code"
-              onChange={event => setEmailCode(event.target.value)}
+              type="password"
+              id="outlined-password"
+              label="Password"
+              name="password"
+              placeholder="Enter Password"
+              autoComplete="password"
+              onChange={event => setPassword(event.target.value)}
+              value={password}
               autoFocus
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+            <TextField
+              error={error}
+              helperText={error ? errorMessage : ''}
+              variant="outlined"
+              margin="normal"
+              required
+              fullWidth
+              type="password"
+              id="outlined-password1"
+              label="Password"
+              name="password1"
+              placeholder="Re-enter Password"
+              autoComplete="password"
+              onChange={event => setPassword1(event.target.value)}
+              value={password1}
+              InputLabelProps={{
+                shrink: true,
+              }}
             />
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -122,7 +154,7 @@ export default function EmailVerification(props) {
                   variant="contained"
                   color="primary"
                   className={classes.submit}
-                > Verify </Button>
+                > Submit </Button>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Button

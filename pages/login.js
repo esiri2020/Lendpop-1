@@ -1,13 +1,13 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import Head from 'next/head';
 import Router from 'next/router';
+import Link from 'next/link';
 import Avatar from '@material-ui/core/Avatar';
 import Button from '@material-ui/core/Button';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import TextField from '@material-ui/core/TextField';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
-import Link from '@material-ui/core/Link';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
@@ -18,7 +18,7 @@ import Api from '../utils/axios.service';
 import theme from '../src/theme';
 import Copyright from '../components/copyright';
 
-const localStorage = require('local-storage');
+const localStorage = require('local-storage')
 const sessionstorage = require('sessionstorage');
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -45,37 +45,36 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export default function EmailVerification(props) {
-  const firstName = sessionstorage.getItem('firstName') ? sessionstorage.getItem('firstName') : 'User'
-  const email = sessionstorage.getItem('email')
+export default function Login(props) {
+  const firstName = localStorage('firstName') ? localStorage('firstName') : 'User'
 
   const classes = useStyles();
 
-  const [emailCode, setEmailCode] = useState()
-
-  useEffect(() => {
-    if (email){
-      const postData = {email: email};
-      Api.otpGeneration(JSON.stringify(postData))
-      .then(response => console.log(response))
-      .catch(error => console.log(error))
-  } else {
-    Router.push('/signUp')
-  }
-}, [])
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('')
 
   const submit = event => {
     event.preventDefault();
-    console.log(emailCode);
+    console.log(email, password);
     // Router.push('/dashboard');
     const postData = {
       email: email,
-      otp: emailCode
+      password: password
     }
-    Api.verification(JSON.stringify(postData)).then(response => {
+    Api.login(JSON.stringify(postData)).then(response => {
       console.log(response)
-      return Router.push('/createPassword');
-    }).catch(error => console.log(error))
+      sessionStorage.setItem('state', JSON.stringify(response.data.data))
+      Router.push('/dashboard',);
+    }).catch(error => {
+      if (error.response && error.response.status === 401 ){
+        setErrorMessage(error.response.data.description);
+        setError(true)}
+      else {
+        console.log(error)
+      }
+    })
   }
 
   const cancel = event => {
@@ -89,7 +88,7 @@ export default function EmailVerification(props) {
   return (
     <div>
       <Head>
-        <title>InstaKash: Email Verification</title>
+        <title>InstaKash Login</title>
       </Head>
       <Container component="main" maxWidth="xs">
         <CssBaseline />
@@ -98,21 +97,46 @@ export default function EmailVerification(props) {
             <LockOutlinedIcon />
           </Avatar>
           <Typography component="h1" variant="h5">
-            Verify Email
+            Login
           </Typography>
           <form className={classes.form} onSubmit={submit} validate={1}>
-            <Typography>To verify your email, kindly type in the OTP code sent to your email.</Typography>
+            {/* <Typography></Typography> */}
             <TextField
+              error={error}
               variant="outlined"
               margin="normal"
               required
               fullWidth
-              id="outlined-emailCode"
-              label="OTP Code"
-              name="emailCode"
-              autoComplete="Verification Code"
-              onChange={event => setEmailCode(event.target.value)}
+              id="outlined-email"
+              label="Email"
+              name="email"
+              placeholder="Email"
+              autoComplete="email"
+              onChange={event => setEmail(event.target.value)}
+              value={email}
               autoFocus
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+            <TextField
+              error={error}
+              helperText={error ? errorMessage : ''}
+              variant="outlined"
+              margin="normal"
+              required
+              fullWidth
+              type="password"
+              id="outlined-password"
+              label="Password"
+              name="password"
+              placeholder="Password"
+              autoComplete="password"
+              onChange={event => setPassword(event.target.value)}
+              value={password}
+              InputLabelProps={{
+                shrink: true,
+              }}
             />
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -122,7 +146,7 @@ export default function EmailVerification(props) {
                   variant="contained"
                   color="primary"
                   className={classes.submit}
-                > Verify </Button>
+                > Login </Button>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Button
@@ -134,6 +158,7 @@ export default function EmailVerification(props) {
               </Grid>
             </Grid>
           </form>
+          <Typography>Don't have an account? <Link href="/"><a>Sign Up!</a></Link></Typography>
         </div>
         <Box mt={5}>
           <Copyright />
