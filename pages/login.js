@@ -14,6 +14,7 @@ import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
 import Typography from '@material-ui/core/Typography';
 import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
+import CircularProgress from '@material-ui/core/CircularProgress';
 import Api from '../utils/axios.service';
 import theme from '../src/theme';
 import Copyright from '../components/copyright';
@@ -36,6 +37,9 @@ const useStyles = makeStyles((theme) => ({
     margin: theme.spacing(1),
     backgroundColor: theme.palette.secondary.main,
   },
+  a: {
+    color: theme.palette.secondary.main,
+  },
   form: {
     width: '100%', // Fix IE 11 issue.
     marginTop: theme.spacing(1),
@@ -43,6 +47,7 @@ const useStyles = makeStyles((theme) => ({
   submit: {
     margin: theme.spacing(3, 0, 2),
   },
+
 }));
 
 export default function Login(props) {
@@ -54,25 +59,28 @@ export default function Login(props) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const submit = event => {
     event.preventDefault();
-    console.log(email, password);
-    // Router.push('/dashboard');
+    setLoading(true)
     const postData = {
       email: email,
       password: password
     }
     Api.login(JSON.stringify(postData)).then(response => {
-      console.log(response)
+      console.log(response.data)
       sessionStorage.setItem('state', JSON.stringify(response.data.data))
       Router.push('/dashboard',);
     }).catch(error => {
-      if (error.response && error.response.status === 401 ){
+      if (error.response && (error.response.status === 401 || error.response.status === 400)){
         setErrorMessage(error.response.data.description);
-        setError(true)}
-      else {
-        console.log(error)
+        setError(true)
+        setLoading(false)
+      } else {
+        setErrorMessage(error.message);
+        setError(true)
+        setLoading(false)
       }
     })
   }
@@ -146,7 +154,10 @@ export default function Login(props) {
                   variant="contained"
                   color="primary"
                   className={classes.submit}
-                > Login </Button>
+                  disabled={loading}
+                >
+                  {loading ? <CircularProgress size={24}/> : 'Login'}
+                </Button>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Button
@@ -158,7 +169,7 @@ export default function Login(props) {
               </Grid>
             </Grid>
           </form>
-          <Typography>Don't have an account? <Link href="/"><a>Sign Up!</a></Link></Typography>
+          <Typography>Don't have an account? <Link href="/"><a className={classes.a}>Sign Up!</a></Link></Typography>
         </div>
         <Box mt={5}>
           <Copyright />

@@ -15,6 +15,7 @@ import Slider from '@material-ui/core/Slider';
 import Tooltip from '@material-ui/core/Tooltip';
 import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
 import Typography from '@material-ui/core/Typography';
+import CircularProgress from '@material-ui/core/CircularProgress';
 import theme from '../src/theme';
 import { withStyles, styled } from '@material-ui/core/styles';
 import Api from '../utils/axios.service';
@@ -25,12 +26,15 @@ const sessionstorage = require('sessionstorage');
 const useStyles = theme => ({
   root: {
     height: '100vh',
-    backgroundImage: 'url(' + `${require('../public/images/InstaKash-background.jpg')}` + ')',
+    backgroundImage: 'url(' + `${require('../public/images/instacash-bg.jpg')}` + ')',
     backgroundRepeat: 'no-repeat',
     backgroundColor:
       theme.palette.type === 'light' ? theme.palette.grey[50] : theme.palette.grey[900],
     backgroundSize: 'cover',
     backgroundPosition: 'center',
+  },
+  a: {
+    color: theme.palette.secondary.main,
   },
   paperroot: {
     "@media screen and (min-width: 600px)": {
@@ -128,7 +132,10 @@ class SignUp extends Component {
       email: '',
       principal: 5000,
       period: 6,
-      monthlyPayment: ''
+      monthlyPayment: '',
+      loading: false,
+      error: false,
+      errorMessage: ''
     }
     this.handleInputChange = this.handleInputChange.bind(this);
     this.handlePrincipalSlider = this.handlePrincipalSlider.bind(this);
@@ -138,6 +145,7 @@ class SignUp extends Component {
     this.calculateMonthlyPayment = this.calculateMonthlyPayment.bind(this);
     this.submit =this.submit.bind(this);
   }
+
   componentDidMount() {
     this.calculateMonthlyPayment()
     console.log(Router.route);
@@ -181,25 +189,34 @@ class SignUp extends Component {
 
   submit(event) {
     event.preventDefault();
+    this.setState({loading: true})
     const postData = {
-      amount: `${this.state.principal}`,
+      amount: this.state.principal,
       first_name: this.state.firstName,
       last_name: this.state.lastName,
       email: this.state.email,
+      tenure: `${this.state.period}`
     }
+    console.log(postData)
     for (let key in this.state) {
-      console.log(key);
-      if (['principal', 'period', 'monthlyPayment'].includes(key)){continue}
+      if (['monthlyPayment', 'loading', 'error', 'errorMessage'].includes(key)){continue}
       sessionstorage.setItem(key, this.state[key])
     }
     Api.register(JSON.stringify(postData)).then(response => {
       Router.push('/email');
-    }).catch(error => console.log(error.response))
+    }).catch(error => {
+      if (error.response && (error.response.status === 401 || error.response.status === 400)){
+      console.log(error.response);
+      this.setState({loading: false, error: true, errorMessage: error.response.data.description})
+    } else {
+      this.setState({loading: false, error: true, errorMessage: error.message})
+    }
+    })
   }
 
   render() {
     const { classes } = this.props;
-    const { principal, period, monthlyPayment } = this.state;
+    const { principal, period, monthlyPayment, error, errorMessage } = this.state;
     return (
       <Grid container component="main" className={classes.root}>
         <CssBaseline />
@@ -209,10 +226,11 @@ class SignUp extends Component {
               Sign up
             </Typography>
             <Typography>You are a step closer to joining thousands of people who trust us to back their financial needs</Typography>
-            <Typography>Already have an account? <Link href="/login"><a>Login</a></Link></Typography>
+            <Typography>Already have an account? <Link href="/login"><a className={classes.a}>Login</a></Link></Typography>
             <div className={classes.margin} />
             <form className={classes.form} validate={1} onSubmit={this.submit}>
               <TextField
+                error={error}
                 variant="outlined"
                 margin="normal"
                 required
@@ -229,6 +247,7 @@ class SignUp extends Component {
                 }}
               />
               <TextField
+                error={error}
                 variant="outlined"
                 margin="normal"
                 required
@@ -244,6 +263,8 @@ class SignUp extends Component {
                 }}
               />
               <TextField
+                error={error}
+                helperText={error ? errorMessage : ''}
                 variant="outlined"
                 margin="normal"
                 required
@@ -298,7 +319,9 @@ class SignUp extends Component {
                     variant="contained"
                     color="primary"
                     className={classes.submit}
-                  > Continue
+                    disabled={this.state.loading}
+                  >
+                    {this.state.loading ? <CircularProgress size={24}/> : 'Continue'}
                   </Button>
                 </Grid>
               </Grid>
